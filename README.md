@@ -118,6 +118,16 @@ rendering dello scontrino, l'API HTTP e il WebSocket QZ Tray, e catturano gli sc
 |---|---|---|
 | ![Simulazioni](docs/screenshots/05-simulations.png) | ![Statistiche](docs/screenshots/06-statistics.png) | ![Sistema](docs/screenshots/08-system.png) |
 
+## Autore
+
+Realizzato da **[Regna Royal Tech](https://regna.tech)**.
+
 ## Licenza
 
-MIT
+Software **gratuito** con **licenza proprietaria**.
+
+Copyright © Regna Royal Tech — [regna.tech](https://regna.tech). Tutti i diritti riservati.
+
+Il software è distribuito gratuitamente. Non sono concessi i diritti di
+modifica, redistribuzione o rivendita senza autorizzazione scritta di
+Regna Royal Tech.
