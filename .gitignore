@@ -1,0 +1,17 @@
+node_modules/
+out/
+dist/
+release/
+*.log
+.DS_Store
+*.local
+coverage/
+test-results/
+playwright-report/
+artifacts/
+data/
+*.sqlite
+*.sqlite-journal
+*.db
+.vscode/
+.idea/

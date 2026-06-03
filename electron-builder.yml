@@ -1,0 +1,25 @@
+appId: com.regnatech.clicketta-thermal-simulator
+productName: Clicketta Thermal Simulator
+directories:
+  buildResources: build
+  output: release
+files:
+  - out/**/*
+  - package.json
+asarUnpack:
+  - '**/node_modules/better-sqlite3/**'
+win:
+  target:
+    - nsis
+  artifactName: ${productName}-${version}-setup.${ext}
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+mac:
+  target:
+    - dmg
+  category: public.app-category.developer-tools
+linux:
+  target:
+    - AppImage
+  category: Development
