@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Clicketta Thermal Simulator — a professional ESC/POS virtual thermal printer simulator compatible with QZ Tray.",
   "author": "Regna Royal Tech (https://regna.tech)",
-  "license": "UNLICENSED",
+  "license": "SEE LICENSE IN LICENSE",
   "main": "./out/main/index.js",
   "type": "module",
   "scripts": {

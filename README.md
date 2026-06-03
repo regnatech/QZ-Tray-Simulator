@@ -130,4 +130,4 @@ Copyright © Regna Royal Tech — [regna.tech](https://regna.tech). Tutti i diri
 
 Il software è distribuito gratuitamente. Non sono concessi i diritti di
 modifica, redistribuzione o rivendita senza autorizzazione scritta di
-Regna Royal Tech.
+Regna Royal Tech. Vedi il file [`LICENSE`](LICENSE) per il testo completo.
