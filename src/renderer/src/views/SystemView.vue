@@ -30,7 +30,7 @@ const info = computed(() => app.systemInfo)
 
 <template>
   <div class="space-y-6">
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
       <div class="glass p-5">
         <div class="flex items-center gap-2 text-slate-400 text-sm mb-3"><Icon name="cpu" :size="16" /> Sistema</div>
         <dl class="space-y-2 text-sm">
@@ -49,6 +49,19 @@ const info = computed(() => app.systemInfo)
         <p class="text-xs text-slate-500 mt-1 font-mono">ws://127.0.0.1:{{ app.servers.qz.port }}</p>
         <button class="btn-ghost w-full mt-3 text-xs" @click="app.servers.qz.running ? app.stopServer('qz') : app.startServer('qz')">
           <Icon name="power" :size="14" /> {{ app.servers.qz.running ? 'Arresta' : 'Avvia' }}
+        </button>
+      </div>
+
+      <div class="glass p-5">
+        <div class="flex items-center gap-2 text-slate-400 text-sm mb-3"><Icon name="layers" :size="16" /> Stampanti di rete</div>
+        <p class="text-2xl font-bold" :class="app.servers.network.running ? 'text-emerald-400' : 'text-slate-500'">
+          {{ app.servers.network.running ? `${app.servers.network.listeners.filter((l) => l.listening).length} in ascolto` : 'Spento' }}
+        </p>
+        <p class="text-xs text-slate-500 mt-1 font-mono truncate">
+          tcp://{{ app.servers.network.addresses[0] ?? '127.0.0.1' }}:{{ app.servers.network.listeners.map((l) => l.port).join(',') || '9100' }}
+        </p>
+        <button class="btn-ghost w-full mt-3 text-xs" @click="app.servers.network.running ? app.stopServer('network') : app.startServer('network')">
+          <Icon name="power" :size="14" /> {{ app.servers.network.running ? 'Arresta' : 'Avvia' }}
         </button>
       </div>
 

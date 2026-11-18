@@ -21,7 +21,7 @@ const tab = ref<'receipt' | 'parser'>('receipt')
 
 onMounted(() => history.load())
 
-const sourceLabels: Record<string, string> = { qz: 'QZ Tray', api: 'API', manual: 'Manuale', simulation: 'Simulazione' }
+const sourceLabels: Record<string, string> = { qz: 'QZ Tray', api: 'API', network: 'Rete', manual: 'Manuale', simulation: 'Simulazione' }
 
 async function applyFilter(): Promise<void> {
   await history.load({ search: search.value || undefined, printerId: printerFilter.value || undefined })

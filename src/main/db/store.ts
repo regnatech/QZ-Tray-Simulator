@@ -64,10 +64,12 @@ export interface Store {
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  apiPort: 9100,
+  // 9100 is the standard raw printing port, reserved for the network printers.
+  apiPort: 8183,
   qzPort: 8182,
   apiEnabled: true,
   qzEnabled: true,
+  networkEnabled: true,
   soundEnabled: true,
   theme: 'dark',
   paperAnimation: true,

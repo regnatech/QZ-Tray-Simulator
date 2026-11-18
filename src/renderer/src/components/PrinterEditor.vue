@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { reactive, watch } from 'vue'
+import { computed, reactive, watch } from 'vue'
 import type { PaperWidth, Printer, PrinterInput } from '@shared/types'
 import Modal from './ui/Modal.vue'
 import Icon from './ui/Icon.vue'
+import Toggle from './ui/Toggle.vue'
+import { usePrintersStore } from '../stores/printers'
+import { useAppStore } from '../stores/app'
 
 const props = defineProps<{ open: boolean; printer?: Printer | null }>()
 const emit = defineEmits<{ close: []; save: [PrinterInput] }>()
@@ -11,9 +14,27 @@ const ICONS = ['printer', 'chef-hat', 'coffee', 'receipt', 'box', 'server', 'ter
 const COLORS = ['#6366f1', '#06b6d4', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
 const DRIVERS = ['Epson TM-T88V', 'Epson TM-T20III', 'Star TSP143', 'Star mC-Print3', 'Bixolon SRP-350', 'Generic ESC/POS']
 
-const form = reactive<PrinterInput>(blank())
+const printers = usePrintersStore()
+const app = useAppStore()
 
-function blank(): PrinterInput {
+type Form = PrinterInput & Required<Pick<PrinterInput, 'networkEnabled' | 'networkHost' | 'networkPort'>>
+const form = reactive<Form>(blank())
+
+/** First port from 9100 upwards not used by another printer. */
+function nextNetworkPort(): number {
+  const used = new Set(printers.printers.map((p) => p.networkPort))
+  let port = 9100
+  while (used.has(port)) port++
+  return port
+}
+
+const portClash = computed(() =>
+  printers.printers.find(
+    (p) => p.id !== props.printer?.id && p.networkEnabled && form.networkEnabled && p.networkPort === form.networkPort
+  )
+)
+
+function blank(): Form {
   return {
     name: '',
     description: '',
@@ -24,7 +45,10 @@ function blank(): PrinterInput {
     identifier: '',
     enabled: true,
     color: '#6366f1',
-    icon: 'printer'
+    icon: 'printer',
+    networkEnabled: true,
+    networkHost: '0.0.0.0',
+    networkPort: nextNetworkPort()
   }
 }
 
@@ -43,7 +67,10 @@ watch(
         identifier: props.printer.identifier,
         enabled: props.printer.enabled,
         color: props.printer.color,
-        icon: props.printer.icon
+        icon: props.printer.icon,
+        networkEnabled: props.printer.networkEnabled,
+        networkHost: props.printer.networkHost,
+        networkPort: props.printer.networkPort
       })
     } else {
       Object.assign(form, blank())
@@ -54,6 +81,8 @@ watch(
 function submit(): void {
   if (!form.name.trim()) return
   if (!form.identifier.trim()) form.identifier = form.name.trim()
+  if (!Number.isInteger(form.networkPort) || form.networkPort < 1 || form.networkPort > 65535) return
+  form.networkHost = form.networkHost.trim() || '0.0.0.0'
   emit('save', { ...form })
 }
 </script>
@@ -109,6 +138,46 @@ function submit(): void {
           <label class="flex items-center gap-2 text-sm text-slate-300">
             <input v-model="form.enabled" type="checkbox" class="accent-brand-500 h-4 w-4" /> Attiva
           </label>
+        </div>
+      </div>
+
+      <div class="glass-soft p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-white flex items-center gap-2"><Icon name="wifi" :size="15" /> Stampante di rete</p>
+            <p class="text-xs text-slate-500">RAW TCP / JetDirect: il gestionale stampa direttamente su IP e porta</p>
+          </div>
+          <Toggle v-model="form.networkEnabled" data-testid="printer-network-enabled" />
+        </div>
+        <div v-if="form.networkEnabled" class="grid grid-cols-3 gap-4">
+          <div class="col-span-2">
+            <label class="label">Indirizzo di ascolto</label>
+            <select v-model="form.networkHost" class="input font-mono">
+              <option value="0.0.0.0">0.0.0.0 (tutte le interfacce, raggiungibile in LAN)</option>
+              <option value="127.0.0.1">127.0.0.1 (solo questo PC)</option>
+              <option v-for="a in app.servers.network.addresses" :key="a" :value="a">{{ a }}</option>
+              <option
+                v-if="!['0.0.0.0', '127.0.0.1', ...app.servers.network.addresses].includes(form.networkHost)"
+                :value="form.networkHost"
+              >
+                {{ form.networkHost }}
+              </option>
+            </select>
+          </div>
+          <div>
+            <label class="label">Porta TCP</label>
+            <input
+              v-model.number="form.networkPort"
+              type="number"
+              min="1"
+              max="65535"
+              class="input font-mono"
+              data-testid="printer-network-port"
+            />
+          </div>
+          <p v-if="portClash" class="col-span-3 text-xs text-amber-300 flex items-center gap-1.5">
+            <Icon name="alert" :size="13" /> Porta già usata da "{{ portClash.name }}": solo una delle due resterà in ascolto.
+          </p>
         </div>
       </div>
 

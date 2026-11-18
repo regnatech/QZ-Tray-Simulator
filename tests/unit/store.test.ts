@@ -7,7 +7,8 @@ function printer(id: string, name: string): Printer {
   return {
     id, name, description: '', driver: 'X', language: 'ESC/POS', port: 'USB001',
     paperWidth: 80, identifier: name, enabled: true, status: 'online', color: '#fff',
-    icon: 'printer', paperLevel: 100, createdAt: Date.now(), updatedAt: Date.now()
+    icon: 'printer', paperLevel: 100, networkEnabled: true, networkHost: '0.0.0.0',
+    networkPort: 9100, createdAt: Date.now(), updatedAt: Date.now()
   }
 }
 function hist(id: string, printerId: string, at: number, duration = 100): HistoryEntry {

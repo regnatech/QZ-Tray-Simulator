@@ -1,4 +1,5 @@
 import { mkdtempSync, mkdirSync } from 'node:fs'
+import { connect } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { WebSocket } from 'ws'
@@ -6,8 +7,10 @@ import { test, expect, _electron as electron } from '@playwright/test'
 import type { ElectronApplication, Page } from '@playwright/test'
 
 const SHOTS = join(process.cwd(), 'artifacts', 'screenshots')
-const API_PORT = 9100
+const API_PORT = 8183
 const QZ_PORT = 8182
+/** Seeded printers listen on 9100 (Cucina), 9101 (Bar), 9102 (Cassa). */
+const NETWORK_PORT = 9100
 
 let app: ElectronApplication
 let page: Page
@@ -108,6 +111,32 @@ test('the QZ Tray compatibility websocket answers printers.find', async () => {
   })
   expect(Array.isArray(result)).toBe(true)
   expect(result).toContain('Cucina')
+})
+
+test('prints over raw TCP like a network printer', async () => {
+  // Status request first, as most POS software does before printing.
+  const status = await new Promise<number[]>((resolve, reject) => {
+    const s = connect(NETWORK_PORT, '127.0.0.1', () => s.write(Buffer.from([0x10, 0x04, 0x01])))
+    s.once('data', (d) => {
+      s.destroy()
+      resolve([...d])
+    })
+    s.once('error', reject)
+  })
+  expect(status).toEqual([0x12])
+
+  await new Promise<void>((resolve, reject) => {
+    const s = connect(NETWORK_PORT, '127.0.0.1', () => s.end(Buffer.from('\x1b@NETWORK TEST\n\x1dV\x00', 'latin1')))
+    s.once('close', () => resolve())
+    s.once('error', reject)
+  })
+  await expect
+    .poll(async () => {
+      const res = await fetch(`http://127.0.0.1:${API_PORT}/api/history?q=NETWORK%20TEST`)
+      const rows = (await res.json()) as Array<{ source: string; printerName: string }>
+      return rows.map((r) => `${r.source}:${r.printerName}`)
+    }, { timeout: 10_000 })
+    .toContain('network:Cucina')
 })
 
 test('captures the remaining views for review', async () => {

@@ -15,6 +15,10 @@ Applicazione **desktop, completamente offline**, per Windows, Linux e macOS.
   stato, colore e icona.
 - **Layer compatibile QZ Tray** — le stampanti sono individuabili via `qz.printers.find()`
   e ricevono i dati inviati da `qz.print()` su WebSocket (`ws://127.0.0.1:8182`).
+- **Stampanti di rete (RAW TCP / JetDirect)** — ogni stampante può essere esposta come una
+  vera stampante Ethernet su IP e porta (default `9100`, `9101`, …), raggiungibile anche dagli
+  altri dispositivi della LAN. Risponde alle richieste di stato `DLE EOT n` e `GS r n` in base
+  agli errori simulati.
 - **Parser ESC/POS** — interpreta i principali comandi: `ESC @`, `ESC E`, `ESC a`, `ESC p`,
   `ESC B`, `GS V`, `GS k` (barcode), `GS ( k` (QR), `ESC 3`, `ESC !`, `GS !`, `ESC d`,
   immagini raster `GS v 0` e altri.
@@ -49,7 +53,8 @@ Electron
 │   ├── ESC/POS Parser   src/main/escpos/*          parser + builder
 │   ├── Virtual Engine   src/main/engine/*          PrinterManager + TrafficSimulator
 │   ├── Local API Server src/main/server/apiServer  Express
-│   └── QZ Server        src/main/server/qzServer   WebSocket compatibile QZ Tray
+│   ├── QZ Server        src/main/server/qzServer   WebSocket compatibile QZ Tray
+│   └── Network Server   src/main/server/networkServer  RAW TCP (porta 9100) per stampante
 ├── Preload Process     src/preload/index.ts        contextBridge tipizzato
 ├── Shared              src/shared/*                tipi + contratto IPC
 └── Vue Frontend        src/renderer/*              UI (stores Pinia, viste, componenti)
@@ -85,15 +90,52 @@ await qz.print(qz.configs.create('Cucina'), [
 ])
 ```
 
-## API locale (esempi)
+## Stampanti di rete
+
+Ogni stampante con **Stampante di rete** attiva apre un listener TCP RAW, come una stampante
+termica Ethernet reale. Nel gestionale si configura come stampante di rete indicando l'IP del
+PC su cui gira il simulatore (visibile in *Impostazioni* e nel dettaglio stampante) e la porta.
+
+| Stampante predefinita | Porta |
+|---|---|
+| Cucina | 9100 |
+| Bar    | 9101 |
+| Cassa  | 9102 |
+
+- Ogni connessione forma un lavoro di stampa: viene chiuso alla chiusura del socket oppure dopo
+  1 secondo di inattività, per i client che tengono aperta la connessione.
+- `DLE EOT 1..4` e `GS r 1/2` ricevono subito il byte di stato coerente con gli errori simulati
+  (carta terminata/quasi terminata, coperchio aperto, offline...). Le connessioni che inviano
+  solo richieste di stato non generano stampe.
+- L'errore simulato *Non raggiungibile* fa chiudere subito le connessioni; disattivare la
+  stampante chiude la porta.
+- Indirizzo di ascolto `0.0.0.0` (tutta la LAN, al primo avvio Windows può chiedere il permesso
+  del firewall) oppure `127.0.0.1` (solo questo PC).
 
 ```bash
-curl http://127.0.0.1:9100/api/printers
-curl -X POST http://127.0.0.1:9100/api/print \
+# Linux / macOS
+printf '\x1b@Ciao dalla rete\n\n\n\x1dV\x00' | nc 127.0.0.1 9100
+```
+
+```powershell
+# Windows
+$c = New-Object Net.Sockets.TcpClient('127.0.0.1', 9100)
+$b = [byte[]](0x1b,0x40) + [Text.Encoding]::ASCII.GetBytes("Ciao dalla rete`n`n`n") + [byte[]](0x1d,0x56,0x00)
+$c.GetStream().Write($b, 0, $b.Length); $c.Close()
+```
+
+## API locale (esempi)
+
+L'API HTTP ascolta sulla porta `8183`. La 9100 è riservata alle stampanti di rete: le
+installazioni precedenti che usavano la 9100 per l'API vengono spostate automaticamente.
+
+```bash
+curl http://127.0.0.1:8183/api/printers
+curl -X POST http://127.0.0.1:8183/api/print \
   -H 'Content-Type: application/json' \
   -d '{"printer":"Cucina","data":"<base64 ESC/POS>","encoding":"base64"}'
-curl http://127.0.0.1:9100/api/history
-curl http://127.0.0.1:9100/api/stats
+curl http://127.0.0.1:8183/api/history
+curl http://127.0.0.1:8183/api/stats
 ```
 
 ## Test
@@ -101,12 +143,13 @@ curl http://127.0.0.1:9100/api/stats
 Il progetto è coperto da test unitari (Vitest) e test end-to-end (Playwright + Electron).
 
 ```bash
-npm run test         # 52 test unitari: parser, builder, engine, QZ, API, store, export
+npm run test         # 63 test unitari: parser, builder, engine, QZ, rete, API, store, export
 npm run test:e2e     # build + e2e Electron (su Linux headless: xvfb-run npm run test:e2e)
 ```
 
 I test e2e avviano l'app reale, creano una stampante, inviano una stampa, verificano il
-rendering dello scontrino, l'API HTTP e il WebSocket QZ Tray, e catturano gli screenshot.
+rendering dello scontrino, l'API HTTP, il WebSocket QZ Tray e la stampa RAW TCP, e catturano
+gli screenshot.
 
 ## Anteprima
 

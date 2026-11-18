@@ -1,7 +1,7 @@
 import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
-import type { AppSettings, PrinterInput, TrafficRate } from '@shared/types'
+import type { AppSettings, PrinterInput, ServerKind, TrafficRate } from '@shared/types'
 import { IPC_EVENT, IPC_INVOKE, type HistoryQueryDto, type IpcMethod } from '@shared/ipc'
 import type { AppContext } from './context'
 import {
@@ -80,11 +80,11 @@ export function registerIpc(ctx: AppContext): void {
 
     'servers.info': () => ctx.serverInfo(),
     'servers.start': async (which) => {
-      await ctx.startServers(which as 'api' | 'qz' | 'all')
+      await ctx.startServers(which as ServerKind)
       return ctx.serverInfo()
     },
     'servers.stop': async (which) => {
-      await ctx.stopServers(which as 'api' | 'qz' | 'all')
+      await ctx.stopServers(which as ServerKind)
       return ctx.serverInfo()
     },
 

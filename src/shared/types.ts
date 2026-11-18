@@ -38,15 +38,28 @@ export interface Printer {
   icon: string
   /** Simulated remaining paper, 0..100 (%). */
   paperLevel: number
+  /** Expose the printer as a raw TCP (JetDirect / port 9100) network printer. */
+  networkEnabled: boolean
+  /** Bind address of the network listener ("0.0.0.0" = every interface). */
+  networkHost: string
+  /** TCP port of the network listener (9100 on real hardware). */
+  networkPort: number
   createdAt: number
   updatedAt: number
 }
 
 export type PrinterInput = Omit<
   Printer,
-  'id' | 'status' | 'paperLevel' | 'createdAt' | 'updatedAt'
+  | 'id'
+  | 'status'
+  | 'paperLevel'
+  | 'networkEnabled'
+  | 'networkHost'
+  | 'networkPort'
+  | 'createdAt'
+  | 'updatedAt'
 > &
-  Partial<Pick<Printer, 'status' | 'paperLevel'>>
+  Partial<Pick<Printer, 'status' | 'paperLevel' | 'networkEnabled' | 'networkHost' | 'networkPort'>>
 
 export type JobStatus = 'queued' | 'printing' | 'done' | 'error'
 
@@ -75,7 +88,7 @@ export interface HistoryEntry {
   rawBase64: string
   /** Serialized rendered document (RenderDocument as JSON). */
   rendered: string
-  source: 'qz' | 'api' | 'manual' | 'simulation'
+  source: 'qz' | 'api' | 'network' | 'manual' | 'simulation'
 }
 
 export interface SimulatedError {
@@ -92,6 +105,8 @@ export interface AppSettings {
   qzPort: number
   apiEnabled: boolean
   qzEnabled: boolean
+  /** Master switch for the per-printer raw TCP network listeners. */
+  networkEnabled: boolean
   soundEnabled: boolean
   theme: 'dark' | 'midnight'
   paperAnimation: boolean
@@ -249,9 +264,27 @@ export interface PrintResult {
   error?: string
 }
 
+export interface NetworkListenerInfo {
+  printerId: string
+  host: string
+  /** Port actually bound (differs from the configured one only when that is 0). */
+  port: number
+  listening: boolean
+  error: string | null
+  connections: number
+}
+
+export type ServerKind = 'api' | 'qz' | 'network' | 'all'
+
 export interface ServerInfo {
   api: { running: boolean; port: number }
   qz: { running: boolean; port: number }
+  network: {
+    running: boolean
+    listeners: NetworkListenerInfo[]
+    /** Non-internal IPv4 addresses of this machine, to configure on the POS side. */
+    addresses: string[]
+  }
 }
 
 /** Realtime events pushed from main -> renderer. */

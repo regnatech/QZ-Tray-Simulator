@@ -4,10 +4,11 @@ import type { AppSettings } from '@shared/types'
 import { api } from '../lib/api'
 
 const FALLBACK: AppSettings = {
-  apiPort: 9100,
+  apiPort: 8183,
   qzPort: 8182,
   apiEnabled: true,
   qzEnabled: true,
+  networkEnabled: true,
   soundEnabled: true,
   theme: 'dark',
   paperAnimation: true,

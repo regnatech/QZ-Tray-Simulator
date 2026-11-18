@@ -35,6 +35,9 @@ export interface SubmitOptions {
   source?: HistoryEntry['source']
 }
 
+/** Standard raw printing (JetDirect) port used by real network printers. */
+export const DEFAULT_NETWORK_PORT = 9100
+
 const PALETTE = ['#6366f1', '#06b6d4', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
 
 export class PrinterManager {
@@ -109,6 +112,9 @@ export class PrinterManager {
       color: input.color || PALETTE[this.store.listPrinters().length % PALETTE.length],
       icon: input.icon || 'printer',
       paperLevel: input.paperLevel ?? 100,
+      networkEnabled: input.networkEnabled ?? true,
+      networkHost: input.networkHost?.trim() || '0.0.0.0',
+      networkPort: input.networkPort ?? this.nextNetworkPort(),
       createdAt: now,
       updatedAt: now
     }
@@ -116,6 +122,14 @@ export class PrinterManager {
     this.log.info('engine', `Created printer "${printer.name}" (${printer.identifier})`)
     this.bus.emitEvent({ type: 'printer:updated', printer })
     return printer
+  }
+
+  /** First port from 9100 upwards not already assigned to another printer. */
+  nextNetworkPort(): number {
+    const used = new Set(this.store.listPrinters().map((p) => p.networkPort))
+    let port = DEFAULT_NETWORK_PORT
+    while (used.has(port)) port++
+    return port
   }
 
   private uniqueIdentifier(base: string): string {
@@ -164,7 +178,9 @@ export class PrinterManager {
       identifier: `${src.identifier}-copy`,
       enabled: src.enabled,
       color: src.color,
-      icon: src.icon
+      icon: src.icon,
+      networkEnabled: src.networkEnabled,
+      networkHost: src.networkHost
     })
   }
 

@@ -26,6 +26,9 @@ CREATE TABLE IF NOT EXISTS printers (
   color       TEXT NOT NULL DEFAULT '#6366f1',
   icon        TEXT NOT NULL DEFAULT 'printer',
   paper_level INTEGER NOT NULL DEFAULT 100,
+  network_enabled INTEGER NOT NULL DEFAULT 1,
+  network_host    TEXT NOT NULL DEFAULT '0.0.0.0',
+  network_port    INTEGER NOT NULL DEFAULT 9100,
   created_at  INTEGER NOT NULL,
   updated_at  INTEGER NOT NULL
 );
@@ -105,6 +108,9 @@ interface PrinterRow {
   color: string
   icon: string
   paper_level: number
+  network_enabled: number
+  network_host: string
+  network_port: number
   created_at: number
   updated_at: number
 }
@@ -124,6 +130,9 @@ function rowToPrinter(r: PrinterRow): Printer {
     color: r.color,
     icon: r.icon,
     paperLevel: r.paper_level,
+    networkEnabled: !!r.network_enabled,
+    networkHost: r.network_host,
+    networkPort: r.network_port,
     createdAt: r.created_at,
     updatedAt: r.updated_at
   }
@@ -137,6 +146,37 @@ export class SqliteStore implements Store {
     this.db.pragma('journal_mode = WAL')
     this.db.pragma('foreign_keys = ON')
     this.db.exec(SCHEMA)
+    this.migrate()
+  }
+
+  /** Bring databases created by older versions up to the current schema. */
+  private migrate(): void {
+    const cols = this.db.prepare('PRAGMA table_info(printers)').all() as Array<{ name: string }>
+    if (!cols.some((c) => c.name === 'network_port')) {
+      this.db.exec(`
+        ALTER TABLE printers ADD COLUMN network_enabled INTEGER NOT NULL DEFAULT 1;
+        ALTER TABLE printers ADD COLUMN network_host TEXT NOT NULL DEFAULT '0.0.0.0';
+        ALTER TABLE printers ADD COLUMN network_port INTEGER NOT NULL DEFAULT 9100;
+      `)
+      // Give every existing printer its own port: 9100, 9101, ...
+      const ids = this.db.prepare('SELECT id FROM printers ORDER BY created_at ASC').all() as Array<{
+        id: string
+      }>
+      const setPort = this.db.prepare('UPDATE printers SET network_port = ? WHERE id = ?')
+      ids.forEach((r, i) => setPort.run(9100 + i, r.id))
+    }
+
+    // Older versions ran the HTTP API on 9100, which now belongs to the network printers.
+    const keys = this.db.prepare('SELECT key, value FROM settings').all() as Array<{
+      key: string
+      value: string
+    }>
+    const settings = new Map(keys.map((k) => [k.key, k.value]))
+    if (!settings.has('networkEnabled') && settings.get('apiPort') === '9100') {
+      this.db
+        .prepare('UPDATE settings SET value = ? WHERE key = ?')
+        .run(JSON.stringify(DEFAULT_SETTINGS.apiPort), 'apiPort')
+    }
   }
 
   listPrinters(): Printer[] {
@@ -163,13 +203,14 @@ export class SqliteStore implements Store {
     this.db
       .prepare(
         `INSERT INTO printers
-          (id,name,description,driver,language,port,paper_width,identifier,enabled,status,color,icon,paper_level,created_at,updated_at)
+          (id,name,description,driver,language,port,paper_width,identifier,enabled,status,color,icon,paper_level,network_enabled,network_host,network_port,created_at,updated_at)
          VALUES
-          (@id,@name,@description,@driver,@language,@port,@paper_width,@identifier,@enabled,@status,@color,@icon,@paper_level,@created_at,@updated_at)
+          (@id,@name,@description,@driver,@language,@port,@paper_width,@identifier,@enabled,@status,@color,@icon,@paper_level,@network_enabled,@network_host,@network_port,@created_at,@updated_at)
          ON CONFLICT(id) DO UPDATE SET
           name=@name, description=@description, driver=@driver, language=@language, port=@port,
           paper_width=@paper_width, identifier=@identifier, enabled=@enabled, status=@status,
-          color=@color, icon=@icon, paper_level=@paper_level, updated_at=@updated_at`
+          color=@color, icon=@icon, paper_level=@paper_level, network_enabled=@network_enabled,
+          network_host=@network_host, network_port=@network_port, updated_at=@updated_at`
       )
       .run({
         id: p.id,
@@ -185,6 +226,9 @@ export class SqliteStore implements Store {
         color: p.color,
         icon: p.icon,
         paper_level: p.paperLevel,
+        network_enabled: p.networkEnabled ? 1 : 0,
+        network_host: p.networkHost,
+        network_port: p.networkPort,
         created_at: p.createdAt,
         updated_at: p.updatedAt
       })

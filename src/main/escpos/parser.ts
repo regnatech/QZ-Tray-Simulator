@@ -12,6 +12,7 @@ import {
   COLUMNS_FONT_B,
   CP437_HIGH,
   CR,
+  DLE,
   ESC,
   GS,
   HT,
@@ -284,6 +285,11 @@ export function parseEscPos(input: Uint8Array, opts: ParseOptions = {}): RenderD
         case 0x68: // GS h n  barcode height
           i += 3
           break
+        case 0x72: // GS r n  transmit status
+        case 0x49: // GS I n  transmit printer ID
+        case 0x61: // GS a n  automatic status back
+          i += 3
+          break
         case 0x4c: // GS L nL nH  left margin
         case 0x57: // GS W nL nH  print area width
           i += 4
@@ -293,6 +299,21 @@ export function parseEscPos(input: Uint8Array, opts: ParseOptions = {}): RenderD
           break
       }
       continue
+    }
+
+    /* ---- DLE realtime commands (answered by the network layer, not printed) ---- */
+    if (b === DLE) {
+      const cmd = input[i + 1]
+      if (cmd === 0x04 || cmd === 0x05) {
+        // DLE EOT n  realtime status / DLE ENQ n  realtime request
+        i += 3
+        continue
+      }
+      if (cmd === 0x14) {
+        // DLE DC4 fn m t  realtime pulse / power-off
+        i += 5
+        continue
+      }
     }
 
     // Fallback: consume one byte.

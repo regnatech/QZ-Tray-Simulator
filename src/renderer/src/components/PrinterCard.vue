@@ -5,12 +5,15 @@ import { ERROR_LABELS } from '@shared/types'
 import Icon from './ui/Icon.vue'
 import StatusBadge from './ui/StatusBadge.vue'
 import { usePrintersStore } from '../stores/printers'
+import { useAppStore } from '../stores/app'
 import { timeAgo } from '../lib/format'
 
 const props = defineProps<{ printer: PrinterWithRuntime; compact?: boolean }>()
 defineEmits<{ open: [id: string] }>()
 
 const printers = usePrintersStore()
+const app = useAppStore()
+const listener = computed(() => app.networkListener(props.printer.id))
 const errs = computed(() => printers.activeErrors(props.printer.id))
 const effect = computed(() => printers.effects[props.printer.id])
 const recentEffect = computed(() => effect.value && Date.now() - effect.value.at < 2500)
@@ -73,7 +76,17 @@ const paperColor = computed(() =>
 
     <div class="mt-3 flex items-center justify-between text-xs text-slate-500">
       <span class="flex items-center gap-1.5"><Icon name="clock" :size="13" /> {{ timeAgo(printer.lastPrintAt) }}</span>
-      <span class="font-mono text-[11px]">{{ printer.identifier }}</span>
+      <span class="flex items-center gap-2 min-w-0">
+        <span
+          v-if="printer.networkEnabled"
+          class="flex items-center gap-1 font-mono text-[11px]"
+          :class="listener?.listening ? 'text-emerald-300' : 'text-slate-500'"
+          :title="listener?.error ?? (listener?.listening ? 'Stampante di rete in ascolto' : 'Listener di rete non attivo')"
+        >
+          <Icon :name="listener?.listening ? 'wifi' : 'wifi-off'" :size="12" />:{{ listener?.port ?? printer.networkPort }}
+        </span>
+        <span class="font-mono text-[11px] truncate">{{ printer.identifier }}</span>
+      </span>
     </div>
 
     <div class="mt-2 h-1.5 rounded-full bg-ink-700 overflow-hidden">

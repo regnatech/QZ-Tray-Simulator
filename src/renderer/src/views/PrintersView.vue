@@ -127,6 +127,16 @@ async function sendSample(sampleId: string): Promise<void> {
             <div class="glass-soft px-3 py-2"><dt class="text-[10px] text-slate-500 uppercase">Porta</dt><dd class="text-slate-200 font-mono">{{ selected.port }}</dd></div>
             <div class="glass-soft px-3 py-2"><dt class="text-[10px] text-slate-500 uppercase">Identificativo</dt><dd class="text-slate-200 font-mono">{{ selected.identifier }}</dd></div>
             <div class="glass-soft px-3 py-2"><dt class="text-[10px] text-slate-500 uppercase">Carta</dt><dd class="text-slate-200">{{ selected.paperWidth }}mm · {{ Math.round(selected.paperLevel) }}%</dd></div>
+            <div class="glass-soft px-3 py-2 col-span-2">
+              <dt class="text-[10px] text-slate-500 uppercase">Rete (RAW TCP)</dt>
+              <dd v-if="!selected.networkEnabled" class="text-slate-500">Disattivata</dd>
+              <dd v-else-if="app.networkListener(selected.id)?.listening" class="text-slate-200 font-mono" data-testid="printer-network-address">
+                {{ app.networkAddress(selected) }}
+              </dd>
+              <dd v-else class="text-amber-300">
+                {{ app.networkListener(selected.id)?.error ?? (app.servers.network.running ? 'In avvio…' : 'Server di rete spento') }}
+              </dd>
+            </div>
           </dl>
 
           <div class="flex items-center justify-between glass-soft px-3 py-2">

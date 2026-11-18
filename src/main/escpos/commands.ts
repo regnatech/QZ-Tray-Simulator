@@ -7,6 +7,7 @@ export const CR = 0x0d
 export const HT = 0x09
 export const NUL = 0x00
 export const BEL = 0x07
+export const DLE = 0x10
 
 /** Number of characters per line for Font A at a given paper width. */
 export const COLUMNS_FONT_A: Record<number, number> = {

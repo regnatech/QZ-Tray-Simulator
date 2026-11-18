@@ -21,8 +21,8 @@ async function save(): Promise<void> {
   await settingsStore.save({ ...form })
   app.toast('success', 'Impostazioni salvate · server riavviati')
 }
-async function toggleServer(which: 'api' | 'qz'): Promise<void> {
-  const running = which === 'api' ? app.servers.api.running : app.servers.qz.running
+async function toggleServer(which: 'api' | 'qz' | 'network'): Promise<void> {
+  const running = app.servers[which].running
   if (running) await app.stopServer(which)
   else await app.startServer(which)
 }
@@ -46,6 +46,25 @@ const LEVELS: LogLevel[] = ['debug', 'info', 'warning', 'error']
           <input v-model.number="form.qzPort" type="number" class="input w-24" />
           <button class="btn-ghost" @click="toggleServer('qz')">
             <Icon name="power" :size="14" /> {{ app.servers.qz.running ? 'Stop' : 'Start' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between glass-soft p-4">
+        <div>
+          <p class="text-sm font-medium text-white">Stampanti di rete (RAW TCP / JetDirect)</p>
+          <p class="text-xs text-slate-500">
+            {{ app.servers.network.listeners.filter((l) => l.listening).length }} in ascolto · porta configurabile per
+            stampante (default 9100)
+            <template v-if="app.servers.network.addresses.length">
+              · IP di questo PC: <span class="font-mono">{{ app.servers.network.addresses.join(', ') }}</span>
+            </template>
+          </p>
+        </div>
+        <div class="flex items-center gap-3">
+          <Toggle v-model="form.networkEnabled" />
+          <button class="btn-ghost" @click="toggleServer('network')">
+            <Icon name="power" :size="14" /> {{ app.servers.network.running ? 'Stop' : 'Start' }}
           </button>
         </div>
       </div>

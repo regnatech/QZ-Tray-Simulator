@@ -23,6 +23,7 @@ const nav = [
 const onlineCount = computed(() => printers.online.length)
 const qzUp = computed(() => app.servers.qz.running)
 const apiUp = computed(() => app.servers.api.running)
+const netListening = computed(() => app.servers.network.listeners.filter((l) => l.listening).length)
 </script>
 
 <template>
@@ -60,6 +61,12 @@ const apiUp = computed(() => app.servers.api.running)
       <div class="flex items-center justify-between text-xs">
         <span class="flex items-center gap-2 text-slate-400"><Icon name="wifi" :size="14" /> QZ Tray</span>
         <span :class="qzUp ? 'text-emerald-300' : 'text-slate-500'">{{ qzUp ? 'attivo' : 'spento' }}</span>
+      </div>
+      <div class="flex items-center justify-between text-xs">
+        <span class="flex items-center gap-2 text-slate-400"><Icon name="layers" :size="14" /> Rete</span>
+        <span :class="app.servers.network.running ? 'text-emerald-300' : 'text-slate-500'">{{
+          app.servers.network.running ? `${netListening} in ascolto` : 'spento'
+        }}</span>
       </div>
       <div class="flex items-center justify-between text-xs">
         <span class="flex items-center gap-2 text-slate-400"><Icon name="server" :size="14" /> API</span>

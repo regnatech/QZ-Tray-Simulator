@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { AppEvent, LogEntry, ServerInfo } from '@shared/types'
+import type { AppEvent, LogEntry, NetworkListenerInfo, Printer, ServerInfo, ServerKind } from '@shared/types'
 import { api } from '../lib/api'
 import { playBeep, playCut, playDrawer } from '../lib/sound'
 import { usePrintersStore } from './printers'
@@ -22,7 +22,11 @@ export const useAppStore = defineStore('app', () => {
   const ready = ref(false)
   const logs = ref<LogEntry[]>([])
   const toasts = ref<Toast[]>([])
-  const servers = ref<ServerInfo>({ api: { running: false, port: 9100 }, qz: { running: false, port: 8182 } })
+  const servers = ref<ServerInfo>({
+    api: { running: false, port: 8183 },
+    qz: { running: false, port: 8182 },
+    network: { running: false, listeners: [], addresses: [] }
+  })
   const systemInfo = ref<{ version: string; platform: string; electron: string; node: string; dbPath: string }>({
     version: '',
     platform: '',
@@ -112,11 +116,21 @@ export const useAppStore = defineStore('app', () => {
     ready.value = true
   }
 
-  async function startServer(which: 'api' | 'qz' | 'all'): Promise<void> {
+  async function startServer(which: ServerKind): Promise<void> {
     servers.value = await api.servers.start(which)
   }
-  async function stopServer(which: 'api' | 'qz' | 'all'): Promise<void> {
+  async function stopServer(which: ServerKind): Promise<void> {
     servers.value = await api.servers.stop(which)
+  }
+  function networkListener(printerId: string): NetworkListenerInfo | undefined {
+    return servers.value.network.listeners.find((l) => l.printerId === printerId)
+  }
+  /** Address a POS should use to reach the printer, e.g. "192.168.1.20:9100". */
+  function networkAddress(printer: Pick<Printer, 'id' | 'networkHost' | 'networkPort'>): string {
+    const port = networkListener(printer.id)?.port ?? printer.networkPort
+    const anyHost = printer.networkHost === '0.0.0.0' || printer.networkHost === ''
+    const host = anyHost ? (servers.value.network.addresses[0] ?? '127.0.0.1') : printer.networkHost
+    return `${host}:${port}`
   }
   async function clearLogs(): Promise<void> {
     await api.logs.clear()
@@ -133,6 +147,8 @@ export const useAppStore = defineStore('app', () => {
     logs,
     toasts,
     servers,
+    networkListener,
+    networkAddress,
     systemInfo,
     toast,
     dismiss,

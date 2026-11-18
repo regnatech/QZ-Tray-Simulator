@@ -8,6 +8,7 @@ import type {
   PrinterInput,
   PrintResult,
   ServerInfo,
+  ServerKind,
   SimulatedError,
   SimulationState,
   StatsSummary,
@@ -69,8 +70,8 @@ export interface ClickettaApi {
   }
   servers: {
     info(): Promise<ServerInfo>
-    start(which: 'api' | 'qz' | 'all'): Promise<ServerInfo>
-    stop(which: 'api' | 'qz' | 'all'): Promise<ServerInfo>
+    start(which: ServerKind): Promise<ServerInfo>
+    stop(which: ServerKind): Promise<ServerInfo>
   }
   simulation: {
     state(): Promise<SimulationState>
